@@ -1,0 +1,36 @@
+# Build output
+bin/
+obj/
+*.exe
+*.dll
+*.pdb
+*.netmodule
+*.i64
+*.idb
+
+# Sample / unpacked payloads / memory dumps (never publish)
+w10t*.exe
+koi*.netmodule
+koi*.dll
+payload1*.dll
+dumped/
+*.bin
+
+# Large decompiled sources (not published; see README)
+koi_readable.cs
+koi_fixed_decompiled.cs
+*_Slayed.decompiled.cs
+*.decompiled.cs
+
+# Logs & machine-specific artifacts
+*.log
+dumper_out.txt
+dumper_err.txt
+ilspy_err.txt
+regkey_sd_backup.bin
+
+# OS / editor junk
+Thumbs.db
+.DS_Store
+.vs/
+.idea/

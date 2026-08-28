@@ -1,0 +1,39 @@
+'Script by XpucT
+
+set o = WScript.CreateObject("WScript.Shell")
+if Wscript.Arguments.Count = 0 then
+	Wscript.Quit
+end if
+
+if Wscript.Arguments(0) = "-refresh" then
+	call Refresh
+elseif Wscript.Arguments(0) = "-reboot" then
+	call Reboot
+end if
+
+sub Refresh
+	o.run "ie4uinit.exe -show"
+	o.run "ie4uinit.exe -ClearIconCache"
+	
+	WScript.Sleep 1000
+	
+	set fso = CreateObject("Scripting.FileSystemObject")
+	local = o.ExpandEnvironmentStrings("%LocalAppData%")	
+	path = "\Microsoft\Internet Explorer\"
+	if fso.FileExists(local & path & "ie4uinit-ClearIconCache.log") then
+		fso.DeleteFile local & path & "ie4uinit-ClearIconCache.log"
+	end if
+	if fso.FileExists(local & path & "ie4uinit-show.log") then
+		fso.DeleteFile local & path & "ie4uinit-show.log"
+	end if
+	if fso.FileExists(local & path & "brndlog.txt") then
+		fso.DeleteFile local & path & "brndlog.txt"
+	end if
+	if fso.FileExists(local & path & "ie4uinit-UserConfig.log") then
+		fso.DeleteFile local & path & "ie4uinit-UserConfig.log"
+	end if
+end sub
+
+sub Reboot
+	o.Run "cmd /c shutdown -r -f -t 0", 0, true
+end sub
