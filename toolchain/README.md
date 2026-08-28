@@ -63,7 +63,10 @@ and to enumerate the `Apply*`/`Restore*` tweak handlers).
 
 ### `helpers/`
 One-off investigation scripts: `hunt_headers.py` (scan for MZ/BSJB/records), `fieldrva_check.py`,
-`deps_check*.py` (trace the `System.Deps` reference), `debug_names.py`, `show.ps1`.
+`deps_check*.py` (trace the `System.Deps` reference), `debug_names.py`, `show.ps1`,
+`blob_freq.py` + `blob_aes_try.py` (chi-squared/entropy + candidate-key AES characterization of the
+two encrypted `payload1` blobs), `homoglyph_check.py` (codepoint proof of the `System.D`+U+0435+`ps`
+homoglyph AssemblyRef), `System.Deps.stub.cs` (in-process stub used for the activation probe).
 
 ## External dependencies
 - [Lib.Harmony](https://github.com/pardeike/Harmony) — runtime method patching

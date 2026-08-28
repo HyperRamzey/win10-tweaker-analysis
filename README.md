@@ -38,9 +38,13 @@ The binary itself is **not included** in this repository (it is a PUP/hacktool; 
 - **No malicious behavior.** Exhaustive sweeps found no miner/stealer/keylogger indicators, no
   credential access, no C2. The only download→execute path fetches genuine Microsoft installers
   (DirectX, .NET 4.7.2) from `download.microsoft.com`, user-initiated.
-- **`System.Deps` mystery solved.** The runtime `FileNotFoundException` for `System.Deps` is a
-  **companion DLL by the same author** that is simply not bundled in the single-file sample (and is
-  never downloaded). It holds the license/fingerprint logic (`Infobase.pcid`).
+- **`System.Deps` mystery solved — and it's two DLLs, one hiding behind a homoglyph.** The runtime
+  `FileNotFoundException` is for **two** companion Pro DLLs by the same author, neither bundled nor
+  downloaded: `System.Deps` (9 types: `Infobase` licensing/`pcid`, `Antispy`, `Imgur`, …) and a
+  second assembly named `System.Dеps` with a **Cyrillic "е" (U+0435)** — a look-alike evasion
+  trick — holding `CleanerPanel`/`Hardware`. The two encrypted `payload1` blobs (`nfH9PMep…`,
+  67,280 B + 35,240 B) are strongly indicated to be these two Pro assemblies in AES-grade encrypted
+  form, decrypted only by the Pro build's protector (see `report/FINAL_REPORT.md` §3/§3.1).
 - **8 subsystems mapped** (privacy/telemetry registry tweaks, services, scheduled tasks/persistence,
   outbound network, context-menu/shell, disk cleanup, Defender control, "Personal recommendations").
   All persistence is user-facing; "Personal recommendations" is a fully-local, opt-in, reversible

@@ -51,16 +51,44 @@ Recovery (all artifacts in `G:\projects\w10t_work`):
 
 ---
 
-## 3. The missing `System.Deps` dependency — resolved
+## 3. The missing `System.Deps` dependency — resolved (and the two encrypted blobs identified)
 
-`System.Deps` is a **companion DLL by the same author** (`System.Deps.dll`, same PublicKeyToken
+`System.Deps` is a **companion Pro DLL by the same author** (same PublicKeyToken
 `0e4c2d2ea0ee1b44`), loaded via `File.Exists(BaseDirectory + "\System.Deps.dll")` in
 `Form1.Loader` (line 104495). It is **not bundled** in this single-file sample and is **never
 downloaded** — hence the runtime `FileNotFoundException`. Its namespace holds 9 helper classes
 referenced throughout `koi`: `Infobase, AboutWindow, BlueFolder, Systems, RAM, Antispy, Imgur,
-Uploadeee, Compress`. A second AssemblyRef `System.Dеps` (Cyrillic "е") has zero TypeRefs — a
-protector decoy. **Open item:** the exact hardware fingerprint `Infobase.pcid` (sent for license
-activation) lives in this DLL; recovering it requires the vendor's full package.
+Uploadeee, Compress`.
+
+**A second, distinct Pro assembly uses a Cyrillic-homoglyph name:** `System.Dеps` — the
+"е" is **U+0435 (Cyrillic)**, not ASCII `e` (U+0065). It is **not a decoy**: it carries 2 real
+TypeRefs, `CleanerPanel` and `Hardware`. The look-alike name (`D`+Cyrillic-`е`+`ps` vs `Deps`)
+is a deliberate evasion / anti-replacement trick.
+
+**The two encrypted blobs are these Pro assemblies.** The `payload1` container
+(`qurjORzRqFFaxuAUHQhvsxwsuqKN`) holds exactly two AES-grade resources (`nfH9PMep…`, 67,280 B and
+35,240 B). Their count and size ordering match the two missing Pro assemblies (9-type
+`System.Deps` ≈ 67 KB; 2-type `System.Dеps` ≈ 35 KB). In the **Pro build** the protector
+decrypts them and serves them through the assembly resolver; in this **free build** that path is
+disabled, so both resolve as `FileNotFoundException`. **Open item:** the exact hardware fingerprint
+`Infobase.pcid` (sent for license activation) lives in the encrypted `System.Deps`; recovering it
+requires the vendor's full/Pro package or the protector key.
+
+### 3.1 Encrypted-blob recovery attempts (IDA + activation probe)
+
+- **Static crypto:** both blobs are AES-grade — chi-squared ≈ 222–240, entropy ≈ 7.99 bits/byte,
+  no repeating-key-XOR structure at any key length; not LZMA/zlib. AES with every plausible derived
+  key (assembly names, MVIDs, resource names, PublicKeyToken) → 0 hits. NETReactorSlayer does not
+  recognize the format.
+- **IDA:** the stub's `<Module>` cctor is a control-flow-flattened .NET Reactor **anti-tamper VM**
+  (`ldc.i4;xor;switch` dispatcher, `VirtualProtect` + `GetHINSTANCE` PE-walk) that decrypts
+  **method bodies in place**. It contains **no resource/blob decryption** and zero resource
+  references; the blob key is not in any decompilable managed code.
+- **Activation probe:** stubbing `System.Deps` in-process let the app load all 545 types but did
+  **not** decrypt the blobs, and is what exposed the second homoglyph assembly. The
+  `Reactivator.php` handshake and `Infobase.Decrypt` both live inside the missing Pro assemblies and
+  are **licensing** paths, not blob decryptors. The blobs are gated behind the Pro build's
+  virtualized protector/licensing and are **not recoverable from the free binary**.
 
 ---
 
@@ -161,11 +189,12 @@ The packing is what triggers generic hacktool/AV heuristics.
 - **Destructive tweaks:** users can irreversibly remove Defender/Edge; the tool warns but complies.
 - **Recommendation:** treat as a PUP/hacktool. If used, disable the Imgur/Uploadee/imageres
   auto-fetch features and be cautious with Defender/Edge removal. To fully close the `pcid`
-  question, obtain and analyze the vendor's `System.Deps.dll`.
+  question, obtain and analyze the vendor's `System.Deps.dll` / `System.Dеps.dll` (Pro package).
 - **Known gaps (closed as far as this sample allows):** (a) `System.Deps.dll` not bundled — `pcid`
-  fingerprint unknown; (b) two encrypted resources inside the `payload1` container
-  (`nfH9PMep…`, 67,280 B + 35,240 B) remain ciphertext (256/256 unique bytes) — decrypted on-demand
-  by specific feature code, never loaded/executed during the monitored run, so not an active payload;
+  fingerprint unknown; (b) the two encrypted `payload1` resources (`nfH9PMep…`,
+  67,280 B + 35,240 B) are strongly indicated to be the two Pro assemblies (`System.Deps` and the
+  Cyrillic-homoglyph `System.Dеps`) in encrypted form — AES-grade, decrypted only by the Pro
+  build's protector, never loaded/executed in the free build, so not an active payload;
   (c) `load_02` capture is a 2 KB stub PE (protector placeholder), not a payload.
 
 ## 7. Artifact index
@@ -176,3 +205,7 @@ The packing is what triggers generic hacktool/AV heuristics.
 - `reports/subsystem_network.md`, `reports/subsystem_personal_recommendations.md`
 - `embedded_res/` — extracted embedded resources (AntiSpy task XML, Rebofresh.vbs, .lnk)
 - `ANALYSIS_CONTEXT.md` — shared analysis context
+- `homoglyph_report.txt` — codepoint proof of `System.Deps` vs `System.D`+U+0435+`ps`
+- `System.Deps.cs` / `System.Deps.dll` — in-process stub used for the activation probe
+- `blob_freq.py`, `blob_aes_try.py` — blob crypto characterization
+- `payload1_res/` — the two extracted encrypted Pro-assembly blobs (`nfH9PMep…`)
