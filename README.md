@@ -56,10 +56,21 @@ The binary itself is **not included** in this repository (it is a PUP/hacktool; 
   `virustotal.com/vtapi/v2/...` (user's own API key), WindowsSpyBlocker `spy.txt` (GitHub),
   `download.microsoft.com` (installers).
 
-**Files dropped into system directories (vendor-fetched, unsigned):**
-- `C:\Windows\imgurUp.exe`, `C:\Windows\Uploadee.exe` (registered as context-menu verbs)
-- `C:\Windows\System32\imageres.dll` / `SystemResources\imageres.dll.mun` (icon-DLL overwrite)
-- `C:\Windows\SafeMode.vbs`, `C:\Windows\Rebofresh.vbs` (benign in-source helpers)
+**Server-directed unsigned helper binaries** (the main supply-chain concern — see
+[`report/FINAL_REPORT.md`](report/FINAL_REPORT.md) §S4a). `InfoChecker.php?key=<X>` returns a URL
+chosen by the vendor's server at runtime; the app then `DownloadFile`s it with **no signature/hash
+check** and drops it into a protected directory:
+
+| InfoChecker key | Dropped to | Role |
+|---|---|---|
+| `imgurup` | `C:\Windows\imgurUp.exe` | "UploadOnImgur" right-click handler for image files |
+| `uploadee` | `C:\Windows\Uploadee.exe` | "Upload.ee" right-click handler for all files |
+| `imageres` / `imageres11` | `C:\Windows\System32\imageres.dll` / `SystemResources\imageres.dll.mun` | Custom icon DLL that **overwrites the protected system icon-resource DLL**, then restarts Explorer |
+
+The two EXEs run only when the user invokes the context-menu verb (not auto-executed); the DLL is
+loaded as an icon resource. Not an active backdoor in this build, but a supply-chain/integrity
+surface. Benign in-source helpers (not server-fetched): `C:\Windows\SafeMode.vbs`,
+`C:\Windows\Rebofresh.vbs`.
 
 **Persistence:**
 - Scheduled task `Win 10 Tweaker (AntiSpy)` → runs the tool's own exe with `AntiSpyRulesUpdater`

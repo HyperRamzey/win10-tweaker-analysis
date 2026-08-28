@@ -89,18 +89,50 @@ Full detail: `SUBSYSTEM_MAP.md`, `reports/subsystem_network.md`,
 - `C:\Windows\Rebofresh.vbs` + two `.lnk` shortcuts: icon-cache refresh / reboot. All benign.
 
 ### S4 network (verified, closed)
-- `InfoChecker.php?key=…` is a **server-directed URL resolver**; the app then downloads vendor
-  binaries with **no signature/hash check**: `imgurUp.exe` & `Uploadee.exe` → `C:\Windows\` +
-  context-menu verbs; `imageres.dll`/`.mun` → `System32` (overwrites a protected system icon DLL).
-  These run only on user action — a **supply-chain/integrity risk**, not an active backdoor.
+
+#### S4a. Server-directed unsigned helper binaries (the main supply-chain concern)
+`InfoChecker.php?key=…` acts as a **server-directed URL resolver**. The app does
+`DownloadString("https://win10tweaker.com/InfoChecker.php?key=<X>")`, which returns a plain-text
+**URL**; a second `DownloadFile(<that URL>, <local path>)` then fetches the actual file. Because the
+real download URL is chosen by the vendor's server at runtime (not hardcoded) and the downloaded
+file is written to disk with **no Authenticode/hash verification**, the vendor — or anyone who
+compromises `win10tweaker.com` or MITMs the connection (aided by the trust-all-TLS callback, S4c) —
+can repoint these at arbitrary content at any time.
+
+Three files are fetched this way and dropped into protected Windows directories:
+
+| # | InfoChecker key | Dropped to | What it is / does |
+|---|---|---|---|
+| 1 | `key=imgurup` | `C:\Windows\imgurUp.exe` | EXE registered as the **"UploadOnImgur"** right-click handler for image files (`.jpg/.jpeg/.png/.gif/.bmp`). Command: `"C:\Windows\imgurUp.exe" "%1"` |
+| 2 | `key=uploadee` | `C:\Windows\Uploadee.exe` | EXE registered as the **"Upload.ee"** right-click handler for all files (`HKCR\*\Shell\…`). Command: `"C:\Windows\Uploadee.exe" "%1"` |
+| 3 | `key=imageres` (Win10) / `key=imageres11` (Win11) | `C:\Windows\System32\imageres.dll` / `C:\Windows\SystemResources\imageres.dll.mun` | A **DLL** (custom icon pack) that **overwrites the protected system icon-resource DLL**, then restarts Explorer. Loaded by Explorer as a resource, not executed as code. |
+
+- The two EXEs are **not auto-executed** by the network code — they run only if the user invokes the
+  context-menu verb. The DLL is loaded as an icon resource. So this is **not an active backdoor** in
+  this build.
+- It **is** a supply-chain/integrity surface: unsigned, server-directed binaries dropped into
+  `C:\Windows`/`System32` and wired into the shell, with no signature/hash gate.
+- Code anchors (`koi_readable.cs`): imgurup install `zw2688()` @ 41467 (download @ 41492);
+  uploadee install `zw4159()` @ 63410 (download @ 63434); imageres download task `zw0871()` @ 15826,
+  write `zw0876()`, Explorer restart @ 15820. Win10-vs-11 target switch @ 15712/15716.
+  Full trace: [`subsystem_network.md`](subsystem_network.md) §1a–1c.
+
+#### S4b. Other outbound endpoints
+
 - `Reactivator.php?pcidOnly=<pcid>&email=<email>`: license phone-home (machine ID + email);
   response stored to registry. `pcid` computed in the missing `System.Deps.dll`.
 - `myexternalip.com/raw` (show IP), `api.imgur.com` (user-initiated screenshot share, public
   Client-ID), `virustotal.com` (user's own API key), WindowsSpyBlocker `spy.txt` (hosts + netsh
   block rules), `download.microsoft.com` (installers). No raw IPs/ftp/onion/C2.
-- **Trust-all TLS callback** (`ServerCertificateValidationCallback => true`, line 28857) installed
-  before fetching blocklists — weakens transport security.
-- **No** downloaded bytes reach `Assembly.Load`/reflection/LOLBin/script-host.
+
+#### S4c. Trust-all TLS callback
+A **trust-all TLS callback** (`ServerCertificateValidationCallback => true`, line 28857) is installed
+before fetching the WindowsSpyBlocker lists — it disables certificate validation for the process's
+downloads, weakening transport security and widening the S4a supply-chain surface (a MITM could
+inject a malicious helper binary).
+
+**Download→execute sweep:** the only DownloadFile→Process.Start chain fetches genuine Microsoft
+installers (see S4b). **No** downloaded bytes reach `Assembly.Load`/reflection/LOLBin/script-host.
 
 ### S8 personal recommendations (verified, closed)
 ~30 contextual, opt-in tweaks built by a local `CommonMethod(label, ApplyN, RestoreN, …)` engine —

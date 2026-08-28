@@ -32,6 +32,17 @@ Every outbound network call in the sample was located and traced. The program ta
 
 `InfoChecker.php` is a **URL-resolver / redirector**. The app does `DownloadString(InfoChecker.php?key=X)` which returns a plain-text **URL**, then does a second `DownloadFile(<that URL>, <local path>)`. The PHP itself only returns text; the *second* hop fetches the binary.
 
+**Quick reference — the three server-directed, unsigned files:**
+
+| # | Key | Dropped to | Type | Runs when | Detail |
+|---|---|---|---|---|---|
+| 1 | `imgurup` | `C:\Windows\imgurUp.exe` | EXE | user invokes "UploadOnImgur" verb | §1b |
+| 2 | `uploadee` | `C:\Windows\Uploadee.exe` | EXE | user invokes "Upload.ee" verb | §1c |
+| 3 | `imageres`/`imageres11` | `System32\imageres.dll` / `SystemResources\imageres.dll.mun` | DLL | loaded by Explorer as icon resource | §1a |
+
+None are auto-executed by the network path; all are written with **no signature/hash verification**,
+and the download URL is chosen server-side at runtime → supply-chain surface, not an active backdoor.
+
 ### 1a. imageres / imageres11 — custom icon DLL (class at 15708)
 
 - URL property `zw0868` (15795–15816):
